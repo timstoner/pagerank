@@ -33,10 +33,13 @@ public class BuildGraphDriver extends Configured implements Tool {
 
 	private static final String INPUT = "input";
 	private static final String OUTPUT = "output";
+	private static final String FACTOR = "factor";
 
 	private String inputPath;
 
 	private String outputPath;
+
+	private float initialDampingFactor = 0.5f;
 
 	public static void main(String[] args) throws Exception {
 		ToolRunner.run(new BuildGraphDriver(), args);
@@ -48,6 +51,7 @@ public class BuildGraphDriver extends Configured implements Tool {
 		parseArgs(args);
 
 		Configuration conf = getConf();
+		conf.setFloat(FACTOR, initialDampingFactor);
 
 		Job job = Job.getInstance(conf, "Build Graph");
 		job.setJobName(BuildGraphDriver.class.getSimpleName() + ":" + inputPath);
@@ -78,10 +82,13 @@ public class BuildGraphDriver extends Configured implements Tool {
 		LOG.info("Parsing Arguments");
 		Option inputOption = new Option("i", "input", true, "input path");
 		Option outputOption = new Option("o", "output", true, "output path");
+		Option factorOption = new Option("f", "factor", true,
+				"initial damping factor");
 
 		Options options = new Options();
 		options.addOption(outputOption);
 		options.addOption(inputOption);
+		options.addOption(factorOption);
 
 		CommandLineParser parser = new BasicParser();
 		CommandLine cmdline = null;
@@ -105,8 +112,14 @@ public class BuildGraphDriver extends Configured implements Tool {
 		inputPath = cmdline.getOptionValue(INPUT);
 		outputPath = cmdline.getOptionValue(OUTPUT);
 
+		if (cmdline.hasOption(FACTOR)) {
+			String s = cmdline.getOptionValue(FACTOR);
+			initialDampingFactor = Float.parseFloat(s);
+		}
+
 		LOG.info("Tool name: " + BuildGraphDriver.class.getSimpleName());
 		LOG.info(" - inputDir: " + inputPath);
 		LOG.info(" - outputDir: " + outputPath);
+		LOG.info(" - initalDampingFactor: " + initialDampingFactor);
 	}
 }
