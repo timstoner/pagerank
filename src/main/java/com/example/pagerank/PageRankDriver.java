@@ -1,5 +1,6 @@
 package com.example.pagerank;
 
+import java.io.IOException;
 import java.util.Arrays;
 
 import org.apache.commons.cli.BasicParser;
@@ -16,20 +17,21 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.example.pagerank.mapreduce.BuildGraphMapper;
-import com.example.pagerank.mapreduce.BuildGraphReducer;
+import com.example.pagerank.io.IntArrayWritable;
+import com.example.pagerank.io.PageNodeWritable;
+import com.example.pagerank.mapreduce.PageRankMapper;
+import com.example.pagerank.mapreduce.PageRankReducer;
 
-public class BuildGraphDriver extends Configured implements Tool {
+public class PageRankDriver extends Configured implements Tool {
 	private static final Logger LOG = LoggerFactory
-			.getLogger(BuildGraphDriver.class);
+			.getLogger(PageRankDriver.class);
 
 	private static final String INPUT = "input";
 	private static final String OUTPUT = "output";
@@ -42,40 +44,56 @@ public class BuildGraphDriver extends Configured implements Tool {
 	private float initialDampingFactor = 0.5f;
 
 	public static void main(String[] args) throws Exception {
-		ToolRunner.run(new BuildGraphDriver(), args);
+		ToolRunner.run(new PageRankDriver(), args);
 	}
 
 	@Override
 	public int run(String[] args) throws Exception {
-		LOG.info("Hello World!");
+		LOG.info("PAGE RANK!");
 		parseArgs(args);
 
+		String input = inputPath;
+		String output = outputPath;
+
+		for (int i = 0; i < 5; i++) {
+			LOG.info("Running Page Rank Iteration: " + i);
+
+			output = outputPath + "/iter" + i;
+			runJob(input, output);
+			input = output;
+		}
+
+		return 0;
+	}
+
+	private void runJob(String input, String output) throws IOException,
+			ClassNotFoundException, InterruptedException {
+		LOG.info("Running Job: " + input);
 		Configuration conf = getConf();
 		conf.setFloat(FACTOR, initialDampingFactor);
 
-		Job job = Job.getInstance(conf, "Build Graph");
-		job.setJobName(BuildGraphDriver.class.getSimpleName() + ":" + inputPath);
-		job.setJarByClass(BuildGraphDriver.class);
+		Job job = Job.getInstance(conf, "Page Rank");
+		job.setJobName(PageRankDriver.class.getSimpleName() + ":" + input);
+		job.setJarByClass(PageRankDriver.class);
 		job.setNumReduceTasks(1);
 
-		FileInputFormat.addInputPath(job, new Path(inputPath));
-		FileOutputFormat.setOutputPath(job, new Path(outputPath));
+		FileInputFormat.addInputPath(job, new Path(input));
+		FileOutputFormat.setOutputPath(job, new Path(output));
 
-		job.setInputFormatClass(TextInputFormat.class);
-		job.setOutputFormatClass(TextOutputFormat.class);
+		job.setInputFormatClass(SequenceFileInputFormat.class);
+		job.setOutputKeyClass(PageNodeWritable.class);
+		job.setOutputValueClass(IntArrayWritable.class);
 
 		job.setMapOutputKeyClass(IntWritable.class);
 		job.setMapOutputValueClass(IntWritable.class);
 
-		job.setMapperClass(BuildGraphMapper.class);
-		job.setReducerClass(BuildGraphReducer.class);
+		job.setMapperClass(PageRankMapper.class);
+		job.setReducerClass(PageRankReducer.class);
 
 		// Delete the output directory if it exists already.
-		FileSystem.get(conf).delete(new Path(outputPath), true);
+		FileSystem.get(conf).delete(new Path(output), true);
 
 		job.waitForCompletion(true);
-
-		return 0;
 	}
 
 	private void parseArgs(String[] args) {
@@ -117,7 +135,7 @@ public class BuildGraphDriver extends Configured implements Tool {
 			initialDampingFactor = Float.parseFloat(s);
 		}
 
-		LOG.info("Tool name: " + BuildGraphDriver.class.getSimpleName());
+		LOG.info("Tool name: " + PageRankDriver.class.getSimpleName());
 		LOG.info(" - inputDir: " + inputPath);
 		LOG.info(" - outputDir: " + outputPath);
 		LOG.info(" - initalDampingFactor: " + initialDampingFactor);

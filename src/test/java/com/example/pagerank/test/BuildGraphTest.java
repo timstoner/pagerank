@@ -17,8 +17,8 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.example.pagerank.mapreduce.BuildGraphMapper;
-import com.example.pagerank.mapreduce.BuildGraphReducer;
+import com.example.pagerank.mapreduce.PageRankMapper;
+import com.example.pagerank.mapreduce.PageRankReducer;
 
 public class BuildGraphTest {
 	private static Logger LOG = LoggerFactory.getLogger(BuildGraphTest.class);
@@ -33,10 +33,10 @@ public class BuildGraphTest {
 	public void before() {
 		LOG.info("Running before");
 
-		BuildGraphMapper mapper = new BuildGraphMapper();
-		BuildGraphReducer reducer = new BuildGraphReducer();
+		PageRankMapper mapper = new PageRankMapper();
+		PageRankReducer reducer = new PageRankReducer();
 
-		mapDriver = new MapDriver<>(mapper);
+		// mapDriver = new MapDriver<>(mapper);
 		reduceDriver = new ReduceDriver<>(reducer);
 		mapReduceDriver = new MapReduceDriver<LongWritable, Text, IntWritable, IntWritable, Text, Text>();
 	}
