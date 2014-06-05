@@ -12,10 +12,6 @@ public class PageNodeWritable implements Writable {
 
 	private float pageRank;
 
-	private int outLinkCount;
-
-	private int[] outLinkIds;
-
 	public PageNodeWritable() {
 	}
 
@@ -40,33 +36,16 @@ public class PageNodeWritable implements Writable {
 		return pageRank;
 	}
 
-	public int[] getLinkIds() {
-		return outLinkIds;
-	}
-
 	@Override
 	public void readFields(DataInput input) throws IOException {
 		pageId = input.readInt();
 		pageRank = input.readFloat();
-		outLinkCount = input.readInt();
-
-		outLinkIds = new int[outLinkCount];
-
-		int id;
-		for (int i = 0; i < outLinkCount; i++) {
-			id = input.readInt();
-			outLinkIds[i] = id;
-		}
 	}
 
 	@Override
 	public void write(DataOutput output) throws IOException {
 		output.writeInt(pageId);
 		output.writeFloat(pageRank);
-		output.write(outLinkCount);
-		for (int id : outLinkIds) {
-			output.writeInt(id);
-		}
 	}
 
 	public static PageNodeWritable read(DataInput in) throws IOException {
