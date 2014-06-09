@@ -20,6 +20,8 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,6 +39,7 @@ public class PageRankDriver extends Configured implements Tool {
 	private static final String OUTPUT = "output";
 	private static final String FACTOR = "factor";
 	private static final String ITERATIONS = "iterations";
+	private static final String REDUCERS = "reducers";
 
 	private String inputPath;
 
@@ -45,6 +48,8 @@ public class PageRankDriver extends Configured implements Tool {
 	private float dampingFactor = 0.85f;
 
 	private int numberOfIterations = 5;
+
+	private int numberOfReducers = 1;
 
 	public static void main(String[] args) throws Exception {
 		ToolRunner.run(new PageRankDriver(), args);
@@ -55,6 +60,8 @@ public class PageRankDriver extends Configured implements Tool {
 		LOG.info("PAGE RANK!");
 		parseArgs(args);
 
+		DateTime startDateTime = new DateTime();
+
 		String input = inputPath;
 		String output = outputPath;
 
@@ -64,8 +71,14 @@ public class PageRankDriver extends Configured implements Tool {
 
 			output = outputPath + "/iter" + i;
 			runJob(input, output);
-			input = output + "/part-r-00000";
+			input = output;
 		}
+
+		DateTime endDateTime = new DateTime();
+
+		LOG.info("All done!");
+		Interval interval = new Interval(startDateTime, endDateTime);
+		LOG.info("Total Time: " + interval.toDuration().getStandardSeconds());
 
 		return 0;
 	}
@@ -77,9 +90,10 @@ public class PageRankDriver extends Configured implements Tool {
 		conf.setFloat(FACTOR, dampingFactor);
 
 		Job job = Job.getInstance(conf, "Page Rank");
-		job.setJobName(PageRankDriver.class.getSimpleName() + ":" + input);
+		job.setJobName(PageRankDriver.class.getSimpleName() + " output-"
+				+ output);
 		job.setJarByClass(PageRankDriver.class);
-		job.setNumReduceTasks(1);
+		job.setNumReduceTasks(numberOfReducers);
 
 		FileInputFormat.addInputPath(job, new Path(input));
 		FileOutputFormat.setOutputPath(job, new Path(output));
@@ -104,14 +118,20 @@ public class PageRankDriver extends Configured implements Tool {
 
 	private void parseArgs(String[] args) {
 		LOG.info("Parsing Arguments");
-		Option inputOption = new Option("i", "input", true, "input path");
-		Option outputOption = new Option("o", "output", true, "output path");
-		Option factorOption = new Option("f", "factor", true, "damping factor");
+		Option inputOption = new Option("i", INPUT, true, "input path");
+		Option outputOption = new Option("o", OUTPUT, true, "output path");
+		Option factorOption = new Option("f", FACTOR, true, "damping factor");
+		Option iterationsOption = new Option("n", ITERATIONS, true,
+				"number of iterations");
+		Option reducersOption = new Option("r", REDUCERS, true,
+				"number of reducers");
 
 		Options options = new Options();
 		options.addOption(outputOption);
 		options.addOption(inputOption);
 		options.addOption(factorOption);
+		options.addOption(reducersOption);
+		options.addOption(iterationsOption);
 
 		CommandLineParser parser = new BasicParser();
 		CommandLine cmdline = null;
@@ -145,11 +165,17 @@ public class PageRankDriver extends Configured implements Tool {
 			numberOfIterations = Integer.parseInt(s);
 		}
 
+		if (cmdline.hasOption(REDUCERS)) {
+			String s = cmdline.getOptionValue(REDUCERS);
+			numberOfReducers = Integer.parseInt(s);
+		}
+
 		LOG.info("Tool name: " + PageRankDriver.class.getSimpleName());
 		LOG.info(" - inputDir: " + inputPath);
 		LOG.info(" - outputDir: " + outputPath);
 		LOG.info(" - dampingFactor: " + dampingFactor);
 		LOG.info(" - numberOfIterations: " + numberOfIterations);
+		LOG.info(" - numberOfReducers:" + numberOfReducers);
 
 	}
 }
