@@ -2,37 +2,50 @@ package com.example.pagerank.mapreduce;
 
 import java.io.IOException;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.Reducer;
 
-import com.example.pagerank.io.IntArrayWritable;
-import com.example.pagerank.io.PageNodeWritable;
+import com.example.pagerank.io.PageRankWritable;
 
-public class PageRankReducer extends
-		Reducer<IntWritable, Writable, PageNodeWritable, IntArrayWritable> {
+public class PageRankReducer
+		extends
+		Reducer<IntWritable, PageRankWritable, PageRankWritable, PageRankWritable> {
+
+	private final PageRankWritable outKey = new PageRankWritable();
+
+	private final PageRankWritable defaultValue = new PageRankWritable();
+
+	private float dampingFactor;
 
 	@Override
-	protected void reduce(IntWritable key, Iterable<Writable> values,
-			Context context) throws IOException, InterruptedException {
-		float rank = 0f;
-		IntArrayWritable outgoinglinks = null;
+	protected void setup(Context context) throws IOException,
+			InterruptedException {
+		outKey.setNode(true);
+		defaultValue.setNode(false);
+		Configuration conf = context.getConfiguration();
+		dampingFactor = conf.getFloat("dampingFactor", 0.85f);
+	}
 
-		for (Writable value : values) {
-			if (value instanceof PageNodeWritable) {
-				PageNodeWritable pg = (PageNodeWritable) value;
-				rank += pg.getPageRank() * 0.85f;
+	@Override
+	protected void reduce(IntWritable key, Iterable<PageRankWritable> values,
+			Context context) throws IOException, InterruptedException {
+		PageRankWritable outgoinglinks = defaultValue;
+		float rank = 0;
+
+		for (PageRankWritable value : values) {
+			if (value.isNode()) {
+				rank += value.getPageRank() * dampingFactor;
 			} else {
-				IntArrayWritable ia = (IntArrayWritable) value;
-				outgoinglinks = ia;
+				outgoinglinks = value;
 			}
 		}
 
-		PageNodeWritable page = new PageNodeWritable();
-		page.setPageId(key.get());
-		page.setPageRank(rank);
+		rank = (1 - dampingFactor) * rank;
 
-		context.write(page, outgoinglinks);
+		outKey.setPageId(key.get());
+		outKey.setPageRank(rank);
+
+		context.write(outKey, outgoinglinks);
 	}
-
 }

@@ -17,15 +17,15 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.example.pagerank.io.IntArrayWritable;
-import com.example.pagerank.io.PageNodeWritable;
+import com.example.pagerank.io.GraphSequenceFileInputFormat;
+import com.example.pagerank.io.GraphSequenceFileOutputFormat;
+import com.example.pagerank.io.PageRankWritable;
 import com.example.pagerank.mapreduce.PageRankMapper;
 import com.example.pagerank.mapreduce.PageRankReducer;
 
@@ -36,12 +36,15 @@ public class PageRankDriver extends Configured implements Tool {
 	private static final String INPUT = "input";
 	private static final String OUTPUT = "output";
 	private static final String FACTOR = "factor";
+	private static final String ITERATIONS = "iterations";
 
 	private String inputPath;
 
 	private String outputPath;
 
-	private float initialDampingFactor = 0.5f;
+	private float dampingFactor = 0.85f;
+
+	private int numberOfIterations = 5;
 
 	public static void main(String[] args) throws Exception {
 		ToolRunner.run(new PageRankDriver(), args);
@@ -55,12 +58,13 @@ public class PageRankDriver extends Configured implements Tool {
 		String input = inputPath;
 		String output = outputPath;
 
-		for (int i = 0; i < 5; i++) {
-			LOG.info("Running Page Rank Iteration: " + i);
+		for (int i = 0; i < numberOfIterations; i++) {
+			LOG.info("Running Page Rank Iteration: " + (i + 1) + "/"
+					+ numberOfIterations);
 
 			output = outputPath + "/iter" + i;
 			runJob(input, output);
-			input = output;
+			input = output + "/part-r-00000";
 		}
 
 		return 0;
@@ -68,9 +72,9 @@ public class PageRankDriver extends Configured implements Tool {
 
 	private void runJob(String input, String output) throws IOException,
 			ClassNotFoundException, InterruptedException {
-		LOG.info("Running Job: " + input);
+		LOG.info("Running Job: input-" + input);
 		Configuration conf = getConf();
-		conf.setFloat(FACTOR, initialDampingFactor);
+		conf.setFloat(FACTOR, dampingFactor);
 
 		Job job = Job.getInstance(conf, "Page Rank");
 		job.setJobName(PageRankDriver.class.getSimpleName() + ":" + input);
@@ -80,12 +84,14 @@ public class PageRankDriver extends Configured implements Tool {
 		FileInputFormat.addInputPath(job, new Path(input));
 		FileOutputFormat.setOutputPath(job, new Path(output));
 
-		job.setInputFormatClass(SequenceFileInputFormat.class);
-		job.setOutputKeyClass(PageNodeWritable.class);
-		job.setOutputValueClass(IntArrayWritable.class);
+		job.setInputFormatClass(GraphSequenceFileInputFormat.class);
+		job.setOutputFormatClass(GraphSequenceFileOutputFormat.class);
+
+		job.setOutputKeyClass(PageRankWritable.class);
+		job.setOutputValueClass(PageRankWritable.class);
 
 		job.setMapOutputKeyClass(IntWritable.class);
-		job.setMapOutputValueClass(IntWritable.class);
+		job.setMapOutputValueClass(PageRankWritable.class);
 
 		job.setMapperClass(PageRankMapper.class);
 		job.setReducerClass(PageRankReducer.class);
@@ -100,8 +106,7 @@ public class PageRankDriver extends Configured implements Tool {
 		LOG.info("Parsing Arguments");
 		Option inputOption = new Option("i", "input", true, "input path");
 		Option outputOption = new Option("o", "output", true, "output path");
-		Option factorOption = new Option("f", "factor", true,
-				"initial damping factor");
+		Option factorOption = new Option("f", "factor", true, "damping factor");
 
 		Options options = new Options();
 		options.addOption(outputOption);
@@ -132,12 +137,19 @@ public class PageRankDriver extends Configured implements Tool {
 
 		if (cmdline.hasOption(FACTOR)) {
 			String s = cmdline.getOptionValue(FACTOR);
-			initialDampingFactor = Float.parseFloat(s);
+			dampingFactor = Float.parseFloat(s);
+		}
+
+		if (cmdline.hasOption(ITERATIONS)) {
+			String s = cmdline.getOptionValue(ITERATIONS);
+			numberOfIterations = Integer.parseInt(s);
 		}
 
 		LOG.info("Tool name: " + PageRankDriver.class.getSimpleName());
 		LOG.info(" - inputDir: " + inputPath);
 		LOG.info(" - outputDir: " + outputPath);
-		LOG.info(" - initalDampingFactor: " + initialDampingFactor);
+		LOG.info(" - dampingFactor: " + dampingFactor);
+		LOG.info(" - numberOfIterations: " + numberOfIterations);
+
 	}
 }

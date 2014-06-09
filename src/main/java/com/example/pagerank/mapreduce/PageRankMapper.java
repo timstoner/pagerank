@@ -6,30 +6,38 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.Mapper;
 
-import com.example.pagerank.io.IntArrayWritable;
-import com.example.pagerank.io.PageNodeWritable;
+import com.example.pagerank.io.PageRankWritable;
 
-public class PageRankMapper extends
-		Mapper<PageNodeWritable, IntArrayWritable, IntWritable, Writable> {
+public class PageRankMapper
+		extends
+		Mapper<PageRankWritable, PageRankWritable, IntWritable, PageRankWritable> {
+
+	private final IntWritable i = new IntWritable();
+	private final PageRankWritable node = new PageRankWritable();
 
 	@Override
-	protected void map(PageNodeWritable key, IntArrayWritable value,
+	protected void map(PageRankWritable key, PageRankWritable value,
 			Context context) throws IOException, InterruptedException {
 		Writable[] data = value.get();
+		
+		float newPageRank = key.getPageRank();
 
-		float newPageRank = key.getPageRank() / data.length;
+		if (data.length > 0) {
+			newPageRank = key.getPageRank() / data.length;
+		}
 
-		PageNodeWritable sourcePageNode = new PageNodeWritable(key.getPageId(),
-				newPageRank);
+		node.setPageId(key.getPageId());
+		node.setPageRank(newPageRank);
+		node.setNode(true);
 
 		IntWritable outgoingPageId;
 		for (Writable item : data) {
 			outgoingPageId = (IntWritable) item;
-			context.write(outgoingPageId, sourcePageNode);
+			context.write(outgoingPageId, node);
 		}
 
-		IntWritable sourcePageId = new IntWritable(key.getPageId());
+		i.set(key.getPageId());
 
-		context.write(sourcePageId, value);
+		context.write(i, value);
 	}
 }

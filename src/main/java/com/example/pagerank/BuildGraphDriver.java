@@ -13,7 +13,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
@@ -24,12 +23,8 @@ import org.apache.hadoop.util.ToolRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.example.pagerank.io.IntArrayWritable;
-import com.example.pagerank.io.PageNodeWritable;
+import com.example.pagerank.io.PageRankWritable;
 import com.example.pagerank.mapreduce.BuildGraphMapper;
-import com.example.pagerank.mapreduce.BuildGraphReducer;
-import com.example.pagerank.mapreduce.PageRankMapper;
-import com.example.pagerank.mapreduce.PageRankReducer;
 
 public class BuildGraphDriver extends Configured implements Tool {
 	private static final Logger LOG = LoggerFactory
@@ -37,8 +32,8 @@ public class BuildGraphDriver extends Configured implements Tool {
 
 	private static final String INPUT = "input";
 	private static final String OUTPUT = "output";
-	private static final String FACTOR = "factor";
-	private float initialDampingFactor = 0.5f;
+	private static final String SEED = "seed";
+	private float seed = 0.5f;
 
 	private String inputPath;
 
@@ -54,6 +49,7 @@ public class BuildGraphDriver extends Configured implements Tool {
 		parseArgs(args);
 
 		Configuration conf = getConf();
+		conf.setFloat("seed", seed);
 
 		Job job = Job.getInstance(conf, "Build Graph");
 		job.setJobName(BuildGraphDriver.class.getSimpleName() + ":" + inputPath);
@@ -65,11 +61,12 @@ public class BuildGraphDriver extends Configured implements Tool {
 
 		job.setInputFormatClass(TextInputFormat.class);
 		job.setOutputFormatClass(SequenceFileOutputFormat.class);
-		job.setOutputKeyClass(PageNodeWritable.class);
-		job.setOutputValueClass(IntArrayWritable.class);
 
-		job.setMapOutputKeyClass(IntWritable.class);
-		job.setMapOutputValueClass(IntWritable.class);
+		job.setOutputKeyClass(PageRankWritable.class);
+		job.setOutputValueClass(PageRankWritable.class);
+
+		job.setMapOutputKeyClass(PageRankWritable.class);
+		job.setMapOutputValueClass(PageRankWritable.class);
 
 		job.setMapperClass(BuildGraphMapper.class);
 
@@ -85,13 +82,12 @@ public class BuildGraphDriver extends Configured implements Tool {
 		LOG.info("Parsing Arguments");
 		Option inputOption = new Option("i", "input", true, "input path");
 		Option outputOption = new Option("o", "output", true, "output path");
-		Option factorOption = new Option("f", "factor", true,
-				"initial damping factor");
+		Option seedOption = new Option("s", "seed", true, "initial page rank seed");
 
 		Options options = new Options();
 		options.addOption(outputOption);
 		options.addOption(inputOption);
-		options.addOption(factorOption);
+		options.addOption(seedOption);
 
 		CommandLineParser parser = new BasicParser();
 		CommandLine cmdline = null;
@@ -115,15 +111,15 @@ public class BuildGraphDriver extends Configured implements Tool {
 		inputPath = cmdline.getOptionValue(INPUT);
 		outputPath = cmdline.getOptionValue(OUTPUT);
 
-		if (cmdline.hasOption(FACTOR)) {
-			String s = cmdline.getOptionValue(FACTOR);
-			initialDampingFactor = Float.parseFloat(s);
+		if (cmdline.hasOption(SEED)) {
+			String s = cmdline.getOptionValue(SEED);
+			seed = Float.parseFloat(s);
 		}
 
 		LOG.info("Tool name: " + PageRankDriver.class.getSimpleName());
 		LOG.info(" - inputDir: " + inputPath);
 		LOG.info(" - outputDir: " + outputPath);
-		LOG.info(" - initalDampingFactor: " + initialDampingFactor);
+		LOG.info(" - seed: " + seed);
 	}
 
 }
