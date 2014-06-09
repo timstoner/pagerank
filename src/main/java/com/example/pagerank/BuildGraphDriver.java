@@ -20,6 +20,8 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,7 +42,13 @@ public class BuildGraphDriver extends Configured implements Tool {
 	private String outputPath;
 
 	public static void main(String[] args) throws Exception {
+		DateTime startDateTime = new DateTime();
+
 		ToolRunner.run(new BuildGraphDriver(), args);
+		DateTime endDateTime = new DateTime();
+		LOG.info("All done!");
+		Interval interval = new Interval(startDateTime, endDateTime);
+		LOG.info("Total Time: " + interval.toDuration().getStandardSeconds());
 	}
 
 	@Override
@@ -82,7 +90,8 @@ public class BuildGraphDriver extends Configured implements Tool {
 		LOG.info("Parsing Arguments");
 		Option inputOption = new Option("i", "input", true, "input path");
 		Option outputOption = new Option("o", "output", true, "output path");
-		Option seedOption = new Option("s", "seed", true, "initial page rank seed");
+		Option seedOption = new Option("s", "seed", true,
+				"initial page rank seed");
 
 		Options options = new Options();
 		options.addOption(outputOption);
