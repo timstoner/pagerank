@@ -19,7 +19,7 @@ public class PageRankMapper
 	protected void map(PageRankWritable key, PageRankWritable value,
 			Context context) throws IOException, InterruptedException {
 		Writable[] data = value.get();
-		
+
 		float newPageRank = key.getPageRank();
 
 		if (data.length > 0) {

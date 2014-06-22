@@ -45,7 +45,7 @@ public class PageRankDriver extends Configured implements Tool {
 
 	private String outputPath;
 
-	private float dampingFactor = 0.85f;
+	private float dampingFactor = 0.15f;
 
 	private int numberOfIterations = 5;
 

@@ -161,9 +161,6 @@ public class PageRankWritable implements WritableComparable<PageRankWritable> {
 
 	@Override
 	public int compareTo(PageRankWritable pg) {
-		Integer thisId = this.pageId;
-		Integer thatId = pg.pageId;
-
-		return thisId.compareTo(thatId);
+		return Integer.compare(pageId, pg.getPageId());
 	}
 }

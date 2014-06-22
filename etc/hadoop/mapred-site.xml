@@ -25,4 +25,8 @@
      <name>mapreduce.reduce.java.opts</name>
      <value>-Xmx4g</value>
   </property>
+  <property>
+     <name>mapreduce.jobhistory.address</name>
+     <value>127.0.0.1:10020</value>
+  </property>
 </configuration>
