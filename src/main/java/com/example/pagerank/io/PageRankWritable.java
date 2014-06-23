@@ -163,4 +163,11 @@ public class PageRankWritable implements WritableComparable<PageRankWritable> {
 	public int compareTo(PageRankWritable pg) {
 		return Integer.compare(pageId, pg.getPageId());
 	}
+
+	public void clear() {
+		this.pageId = 0;
+		this.pageRank = 0;
+		this.isNode = true;
+		this.data = null;
+	}
 }

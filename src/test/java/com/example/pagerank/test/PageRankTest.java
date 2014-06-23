@@ -32,7 +32,18 @@ public class PageRankTest {
 	public void testMapper() {
 		LOG.info("Running testMapper");
 
-		String data = "src/test/resources/data/pagerankmapper.txt";
+		readMapperInput();
+		readMapperOutput();
+
+		try {
+			mapDriver.runTest();
+		} catch (IOException e) {
+			LOG.error("problem running test", e);
+		}
+	}
+
+	private void readMapperInput() {
+		String data = "src/test/resources/data/pagerankmapperinput.txt";
 		PageRankWritable key = new PageRankWritable();
 		key.setNode(true);
 		PageRankWritable value = new PageRankWritable();
@@ -50,12 +61,7 @@ public class PageRankTest {
 				key.setPageRank(Float.parseFloat(b));
 
 				if (parts.length > 1) {
-					String[] links = parts[1].split(",");
-					IntWritable[] elements = new IntWritable[links.length];
-					for (int i = 0; i < links.length; i++) {
-						int id = Integer.parseInt(links[i]);
-						elements[i] = new IntWritable(id);
-					}
+					IntWritable[] elements = splitPageIds(parts[1]);
 					value.set(elements);
 				} else {
 					value.set(new IntWritable[0]);
@@ -63,10 +69,58 @@ public class PageRankTest {
 
 				mapDriver.addInput(key, value);
 			}
-
-			mapDriver.runTest();
 		} catch (IOException e) {
-			LOG.error("problem running test", e);
+			LOG.error("Problem reading input", e);
 		}
+	}
+
+	private void readMapperOutput() {
+		String data = "src/test/resources/data/pagerankmapperoutput.txt";
+		IntWritable key = new IntWritable();
+		PageRankWritable value = new PageRankWritable();
+
+		try {
+			List<String> lines = FileUtils.readLines(new File(data));
+			for (String line : lines) {
+				String[] parts = line.split(":");
+				String a = parts[0];
+
+				key.set(Integer.parseInt(a));
+
+				if (parts.length > 1) {
+					if (parts[1].contains(";")) {
+						value.setNode(true);
+						String[] values = parts[1].split(";");
+
+						int id = Integer.parseInt(values[0]);
+						float rank = Float.parseFloat(values[1]);
+
+						value.setPageId(id);
+						value.setPageRank(rank);
+					} else {
+						value.setNode(false);
+						IntWritable[] elements = splitPageIds(parts[1]);
+						value.set(elements);
+					}
+				} else {
+					value.setNode(false);
+					value.set(new IntWritable[0]);
+				}
+
+				mapDriver.addOutput(key, value);
+			}
+		} catch (IOException e) {
+			LOG.error("Problem reading output", e);
+		}
+	}
+
+	private IntWritable[] splitPageIds(String s) {
+		String[] links = s.split(",");
+		IntWritable[] elements = new IntWritable[links.length];
+		for (int i = 0; i < links.length; i++) {
+			int id = Integer.parseInt(links[i]);
+			elements[i] = new IntWritable(id);
+		}
+		return elements;
 	}
 }

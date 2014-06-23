@@ -74,7 +74,7 @@ public class BuildGraphTest {
 				mapDriver.addOutput(outputKey, outputValue);
 			}
 
-//			mapDriver.runTest();
+			mapDriver.runTest();
 		} catch (IOException e) {
 			LOG.error("problem running test", e);
 		}
